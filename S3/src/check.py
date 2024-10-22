@@ -14,11 +14,8 @@ def decrypt_file(encrypted_data, key):
     Returns:
         bytes: The decrypted file data.
     """
-    # Extract the initialization vector (IV) from the encrypted data
     iv = encrypted_data[:AES.block_size]
-    cipher = AES.new(key, AES.MODE_CBC, iv)  # Create AES cipher with the IV
-
-    # Decrypt the file data and remove padding
+    cipher = AES.new(key, AES.MODE_CBC, iv)
     decrypted_data = unpad(cipher.decrypt(encrypted_data[AES.block_size:]), AES.block_size)
     return decrypted_data
 
@@ -32,28 +29,20 @@ def check_file_integrity(bucket_name, file_key, key):
         file_key (str): The key of the file in S3.
         key (bytes): The AES key used for decryption.
     """
-    # Initialize the S3 client
     s3 = boto3.client('s3')
 
     try:
-        # Retrieve the encrypted file from S3
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
-        encrypted_data = response['Body'].read()  # Read the file data
+        encrypted_data = response['Body'].read()
 
-        # Retrieve the stored hash from file metadata
         stored_hash = response['Metadata'].get('filehash', None)
-
         if not stored_hash:
             print(f"Error: 'filehash' not found in the metadata for {file_key}.")
             return
 
-        # Decrypt the encrypted file data
         decrypted_data = decrypt_file(encrypted_data, key)
-
-        # Calculate the SHA-256 hash of the decrypted file
         recalculated_hash = hashlib.sha256(decrypted_data).hexdigest()
 
-        # Compare the calculated hash with the stored hash
         if recalculated_hash == stored_hash:
             print(f"File integrity check passed: {file_key}")
         else:
@@ -64,8 +53,7 @@ def check_file_integrity(bucket_name, file_key, key):
 
 
 if __name__ == "__main__":
-    bucket_name = 'minor-testing-bucket'  # S3 bucket name
-    file_key = 'test_file.txt'  # Key for the file in S3
-    # Replace with the actual AES key used for encryption
-    key = bytes.fromhex('replace-with-aes-key')  # Use the key printed by app.py
-    check_file_integrity(bucket_name, file_key, key)  # Call the integrity check function
+    bucket_name = 'minor-testing-bucket'
+    file_key = 'test_file.txt'
+    key = bytes.fromhex('replace-with-aes-key')
+    check_file_integrity(bucket_name, file_key, key)
